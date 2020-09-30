@@ -1,8 +1,22 @@
 #include<vector>
 #include<iostream>
 using namespace std;
-#define USE_OMP 1
-#define OMP_THREAD 4
+#define USE_OMP 0
+#define OMP_THREAD 8
+
+
+// #if __AVX__
+// #include "avx_activation.h"
+// #include "avx_usability.h"
+// #endif
+
+#if __SSE2__
+#include <emmintrin.h>
+#endif
+#if __AVX__
+#include <immintrin.h>
+#endif
+
 
 using namespace std;
 
@@ -118,6 +132,10 @@ using namespace std;
             float *packptr = src_im2col_pack + i *packHeight* packWidth;
 
             for(int j = 0; j < inChannel * kernelSize; j ++){
+
+#if __AVX__
+                _mm256_storeu_ps(packptr, _mm256_loadu_ps(src0));
+#else                                
                 packptr[0] = src0[0];
                 packptr[1] = src0[1];
                 packptr[2] = src0[2];
@@ -126,7 +144,7 @@ using namespace std;
                 packptr[5] = src0[5];
                 packptr[6] = src0[6];
                 packptr[7] = src0[7];
-
+#endif
                 packptr +=8;
                 src0 += outSize;
             }
@@ -169,15 +187,100 @@ using namespace std;
             float *destptr3 = dest + (c + 3) * outSize;
 
             int i = 0;
+            const float zeros[4] = {0.f, 0.f, 0.f, 0.f};
+            const float *biasptr = zeros;
 
             for(; i+7 < N; i = i + 8){
                 const float *ptrB = src_im2col_pack + (i / 8) *  packHeight * packWidth;
                 const float *ptrA = kernel_im2col_pack + (c / 4)* kernelPackHeight * kernelPackWidth;
 
+#if __AVX__
+                __m256 _sum0 = _mm256_broadcast_ss(biasptr);
+                __m256 _sum1 = _mm256_broadcast_ss(biasptr +1);
+                __m256 _sum2 = _mm256_broadcast_ss(biasptr +2);
+                __m256 _sum3 = _mm256_broadcast_ss(biasptr +3);
+
+                int m = 0;
+                for (; m +3 < K; m +=4){
+
+                    //k0
+                    __m256 _va0 = _mm256_broadcast_ss(ptrA);
+                    __m256 _va1 = _mm256_broadcast_ss(ptrA + 1);
+                    __m256 _va2 = _mm256_broadcast_ss(ptrA + 2);
+                    __m256 _va3 = _mm256_broadcast_ss(ptrA + 3);
+                    __m256 _vb0 = _mm256_broadcast_ss(ptrB);
+                    __m256 _vb1 = _mm256_broadcast_ss(ptrB + 8);
+                    __m256 _vb2 = _mm256_broadcast_ss(ptrB + 16);
+                    __m256 _vb3 = _mm256_broadcast_ss(ptrB + 24);
+                    _sum0 = _mm256_fmadd_ps(_vb0, _va0, _sum0);
+                    _sum1 = _mm256_fmadd_ps(_vb1, _va1, _sum1);
+                    _sum2 = _mm256_fmadd_ps(_vb2, _va2, _sum2);
+                    _sum3 = _mm256_fmadd_ps(_vb3, _va3, _sum3);
+                    ptrA += 4;
+
+                    // k1
+                    _va0 = _mm256_broadcast_ss(ptrA);
+                    _va1 = _mm256_broadcast_ss(ptrA + 1);
+                    _va2 = _mm256_broadcast_ss(ptrA + 2);
+                    _va3 = _mm256_broadcast_ss(ptrA + 3);
+                    _sum0 = _mm256_fmadd_ps(_vb1, _va0, _sum0); // sum0 += (a10-a17) * k01
+                    _sum1 = _mm256_fmadd_ps(_vb1, _va1, _sum1); // sum1 += (a10-a17) * k11
+                    _sum2 = _mm256_fmadd_ps(_vb1, _va2, _sum2); // sum2 += (a10-a17) * k21
+                    _sum3 = _mm256_fmadd_ps(_vb1, _va3, _sum3); // sum3 += (a10-a17) * k31
+
+                    ptrA += 4;
+
+                    // k2
+                    _va0 = _mm256_broadcast_ss(ptrA);
+                    _va1 = _mm256_broadcast_ss(ptrA + 1);
+                    _va2 = _mm256_broadcast_ss(ptrA + 2);
+                    _va3 = _mm256_broadcast_ss(ptrA + 3);
+                    _sum0 = _mm256_fmadd_ps(_vb2, _va0, _sum0); // sum0 += (a20-a27) * k02
+                    _sum1 = _mm256_fmadd_ps(_vb2, _va1, _sum1); // sum1 += (a20-a27) * k12
+                    _sum2 = _mm256_fmadd_ps(_vb2, _va2, _sum2); // sum2 += (a20-a27) * k22
+                    _sum3 = _mm256_fmadd_ps(_vb2, _va3, _sum3); // sum3 += (a20-a27) * k32
+
+                    ptrA += 4;
+
+                    // k3
+                    _va0 = _mm256_broadcast_ss(ptrA);
+                    _va1 = _mm256_broadcast_ss(ptrA + 1);
+                    _va2 = _mm256_broadcast_ss(ptrA + 2);
+                    _va3 = _mm256_broadcast_ss(ptrA + 3);
+                    _sum0 = _mm256_fmadd_ps(_vb3, _va0, _sum0); // sum0 += (a30-a37) * k03
+                    _sum1 = _mm256_fmadd_ps(_vb3, _va1, _sum1); // sum1 += (a30-a37) * k13
+                    _sum2 = _mm256_fmadd_ps(_vb3, _va2, _sum2); // sum2 += (a30-a37) * k23
+                    _sum3 = _mm256_fmadd_ps(_vb3, _va3, _sum3); // sum3 += (a30-a37) * k33
+
+                    ptrA += 4;
+                    ptrB += 32;
+                }
+
+                for(; m<K; m++){
+                    // k0
+                    __m256 _va0 = _mm256_broadcast_ss(ptrA);
+                    __m256 _va1 = _mm256_broadcast_ss(ptrA + 1);
+                    __m256 _va2 = _mm256_broadcast_ss(ptrA + 2);
+                    __m256 _va3 = _mm256_broadcast_ss(ptrA + 3);
+                    __m256 _vb0 = _mm256_loadu_ps(ptrB);
+                    _sum0 = _mm256_fmadd_ps(_vb0, _va0, _sum0); // sum0 = (a00-a07) * k00
+                    _sum1 = _mm256_fmadd_ps(_vb0, _va1, _sum1); // sum1 = (a00-a07) * k10
+                    _sum2 = _mm256_fmadd_ps(_vb0, _va2, _sum2); // sum2 = (a00-a07) * k20
+                    _sum3 = _mm256_fmadd_ps(_vb0, _va3, _sum3); // sum3 = (a00-a07) * k30
+
+                    ptrA += 4;
+                    ptrB += 8;
+                }
+
+                _mm256_storeu_ps(destptr0, _sum0);
+                _mm256_storeu_ps(destptr1, _sum1);
+                _mm256_storeu_ps(destptr2, _sum2);
+                _mm256_storeu_ps(destptr3, _sum3);
+#else                               
                 float sum0[8]= {0};//pack之后的每一列
                 float sum1[8]= {0};
-                float sum2[8] = {0};
-                float sum3[8] = {0};
+                float sum2[8]= {0};
+                float sum3[8]= {0};
 
                 int j=0;
                 // K = kernelSize * inChannel
@@ -255,7 +358,7 @@ using namespace std;
                     destptr2[n] = sum2[n];
                     destptr3[n] = sum3[n];
                 }
-
+#endif
                 destptr0 +=8;
                 destptr1 +=8;
                 destptr2 +=8;

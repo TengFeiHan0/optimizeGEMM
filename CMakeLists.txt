@@ -8,6 +8,12 @@ ENDIF()
 
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
+add_definitions("-DENABLE_SSE")
+set(CMAKE_CXX_FLAGS
+   "${SSE_FLAGS} -O3 -g -std=c++0x -march=native"
+#   "${SSE_FLAGS} -O3 -g -std=c++0x -fno-omit-frame-pointer"
+)
+
 find_package(OpenCV )
 if(NOT OpenCV_FOUND)
    find_package(OpenCV 2.4.3 QUIET)
@@ -32,3 +38,6 @@ endif()
 
 add_executable(test_op src/test_conv.cpp)
 target_link_libraries(test_op ${OpenCV_LIBS})
+
+add_executable(test_winograd src/test_winograd.cpp)
+target_link_libraries(test_winograd ${OpenCV_LIBS})
