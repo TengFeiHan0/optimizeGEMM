@@ -22,9 +22,11 @@
 
 | Method    | Numpy Time | TVM Time | FLOPs |
 | :------: |:------: |:------: |:------: |
-| |  | | |
-| |  | | |
-| | |  | | 
-| |  | | |
-| |  | | |
-|  |  | | |
+| baseline | 0.008193 | 1.907586 | 1.125760 |
+| blocking |  | | |
+| vectorize | |  | | 
+| loop permute|  | | |
+| packing |  | | |
+| write cache |  | | |
+| parallel |  | | |
+| auto-tvm |  | | |
