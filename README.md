@@ -19,14 +19,14 @@
 | 8+AVX | 48.42 |
 
 # how to optimize GEMM(TVM)
-
-| Method    | Numpy Time | TVM Time | FLOPs |
-| :------: |:------: |:------: |:------: |
-| baseline | 0.008193 | 1.907586 | 1.125760 |
-| blocking |  | | |
-| vectorize | |  | | 
-| loop permute|  | | |
-| packing |  | | |
-| write cache |  | | |
-| parallel |  | | |
-| auto-tvm |  | | |
+all experiments were done under same conditions(target = 'llvm', bn=32, etc)
+| Method    | Numpy Time | TVM Time | 
+| :------: |:------: |:------: |
+| baseline | 0.008193 | 1.987586 | 
+| blocking | 0.008379 | 0.218961 | 
+| vectorize | 0.008022 | 0.237825 | 
+| loop permute| 0.008263 | 0.103705 |
+| packing | 0.008152 | 0.104551 | 
+| write cache |  0.008472 |  0.099767 | 
+| parallel | 0.008281  | 0.032557  | 
+| auto-tvm |  | | 
