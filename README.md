@@ -17,9 +17,9 @@
 | 4 | 770.47 |
 | 8  | 695.93 |
 | 8+AVX | 48.42 |
-
-# how to optimize GEMM(TVM)
-all experiments were done under same conditions(target = 'llvm', bn=32, etc)
+# TVM
+## How to optimize GEMM
+All experiments were done under same conditions(target = 'llvm', bn=32, etc)
 | Method    | Numpy Time | TVM Time | 
 | :------: |:------: |:------: |
 | baseline | 0.008193 | 1.987586 | 
@@ -29,4 +29,4 @@ all experiments were done under same conditions(target = 'llvm', bn=32, etc)
 | packing | 0.008152 | 0.104551 | 
 | write cache |  0.008472 |  0.099767 | 
 | parallel | 0.008281  | 0.032557  | 
-| auto-tvm |  | | 
+| auto-tvm | 0.007933 |  0.007097 | 
