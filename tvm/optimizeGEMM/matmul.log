@@ -1,0 +1,1 @@
+{"input": ["llvm -keys=cpu -mcpu=core-avx2", "matmul", [], {}], "config": {"index": 11245, "code_hash": null, "entity": [["tile_x", "sp", [-1, 16, 4]], ["tile_y", "sp", [-1, 1, 16]], ["tile_k", "sp", [-1, 4]]]}, "result": [[0.0071920534], 0, 0.38767504692077637, 1602067394.0079474], "version": 0.2, "tvm_version": "0.8.dev0"}
